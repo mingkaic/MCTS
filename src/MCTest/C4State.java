@@ -72,7 +72,7 @@ public class C4State implements MCState {
     }
 
     private char getWinner() {
-        if (lastRow < 0) {
+        if (lastCol < 0) {
             return playerMarker[0];
         }
 
