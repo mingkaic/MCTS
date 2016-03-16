@@ -26,18 +26,19 @@ public class Connect4 {
             if (rules.getPlayerId() == 1) {
                 rules.doMove(MCTree.computeMove(rules, maxIt, nTrees));
             } else {
-                if (human_player) while (true) {
-                    move = MCMove.NO_MOVE;
-                    System.out.print("Input your move: ");
-                    move = new MCMove(reader.nextInt());
-                    try {
-                        rules.doMove(move);
-                        break;
-                    } catch (Exception e) {
-                        System.out.println("invalid move");
+                if (human_player) {
+                    while (true) {
+                        move = MCMove.NO_MOVE;
+                        System.out.print("Input your move: ");
+                        move = new MCMove(reader.nextInt());
+                        try {
+                            rules.doMove(move);
+                            break;
+                        } catch (Exception e) {
+                            System.out.println("invalid move");
+                        }
                     }
-                }
-                else {
+                } else {
                     rules.doMove(MCTree.computeMove(rules, maxIt, nTrees));
                 }
             }
