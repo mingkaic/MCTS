@@ -23,7 +23,9 @@ public class C4State implements MCState {
         this.lastRow = this.lastCol = -1;
 
         board = new char[nRow][nCol];
-        Arrays.fill(board, playerMarker[0]); // init
+        for (int i = 0; i < nRow; i++) {
+            Arrays.fill(board[i], playerMarker[0]); // init
+        }
     }
 
     public C4State() {
