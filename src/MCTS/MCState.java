@@ -17,6 +17,8 @@ public interface MCState {
     public List<MCMove> getMoves();
 
     public double getResult(int playerId);
+    
+    public MCState copy();
 
     int getPlayerId();
 
