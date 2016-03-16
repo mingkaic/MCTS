@@ -53,7 +53,7 @@ public class C4State implements MCState {
     public void doRandomMoves(Random r) {
         int rVal;
         do {
-            rVal = r.nextInt(nCol - 1);
+            rVal = r.nextInt(nCol);
         } while (board[0][rVal] != playerMarker[0]);
         doMove(new MCMove(rVal));
     }
