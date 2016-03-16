@@ -35,6 +35,19 @@ public class C4State implements MCState {
     public C4State(int nRow, int nCol) {
         setUp(nRow, nCol);
     }
+    
+    private C4State(C4State source) {
+        playerToMove = source.playerToMove;
+        this.nRow = source.nRow;
+        this.nCol = source.nCol;
+        this.lastRow = source.lastRow;
+        this.lastCol = source.lastCol;
+        
+        board = new char[nRow][];
+        for(int i = 0; i < nRow; i++) {
+            board[i] = source.board[i].clone();
+        }
+    }
 
     @Override
     public void doMove(MCMove move) {
@@ -72,6 +85,46 @@ public class C4State implements MCState {
         }
 
         return false;
+    }
+
+    @Override
+    public List<MCMove> getMoves() {
+        List<MCMove> moves = new ArrayList<>();
+        if (getWinner() != playerMarker[0]) {
+            return moves;
+        }
+
+        for (int col = 0; col < nCol; ++col) {
+            if (board[0][col] == playerMarker[0]) {
+                moves.add(new MCMove(col));
+            }
+        }
+        return moves;
+    }
+
+    @Override
+    public double getResult(int playerId) {
+        char winner = getWinner();
+        if (winner == playerMarker[0]) {
+            return 0.5;
+        }
+
+        if (winner == playerMarker[playerId]) {
+            return 0.0;
+        }
+        else {
+            return 1.0;
+        }
+    }
+    
+    @Override
+    public MCState copy() {
+        return new C4State(this);
+    }
+
+    @Override
+    public int getPlayerId() {
+        return playerToMove;
     }
 
     private char getWinner() {
@@ -140,41 +193,6 @@ public class C4State implements MCState {
         }
 
         return playerMarker[0];
-    }
-
-    @Override
-    public List<MCMove> getMoves() {
-        List<MCMove> moves = new ArrayList<>();
-        if (getWinner() != playerMarker[0]) {
-            return moves;
-        }
-
-        for (int col = 0; col < nCol; ++col) {
-            if (board[0][col] == playerMarker[0]) {
-                moves.add(new MCMove(col));
-            }
-        }
-        return moves;
-    }
-
-    @Override
-    public double getResult(int playerId) {
-        char winner = getWinner();
-        if (winner == playerMarker[0]) {
-            return 0.5;
-        }
-
-        if (winner == playerMarker[playerId]) {
-            return 0.0;
-        }
-        else {
-            return 1.0;
-        }
-    }
-
-    @Override
-    public int getPlayerId() {
-        return playerToMove;
     }
 
     public void printBoard() {
