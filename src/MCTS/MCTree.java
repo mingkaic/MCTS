@@ -14,30 +14,31 @@ public class MCTree <Rules extends MCState> {
         playerId = state.getPlayerId();
         root = new MCNode(state);
 
-        for (int i = 1; i <= maxIt || maxIt < 0; i++) {
+        for (int i = 1; i <= maxIt || maxIt < 0; i++) { // 1 it = 1 game
+            Rules stateCpy = state.copy();
             MCNode node = root;
 
             // select path
             while (null == node.getUntriedMoves() && 0 != node.arity()) {
                 node = node.selectChild();
-                state.doMove(node.getMove());
+                stateCpy.doMove(node.getMove());
             }
 
             // expand
             MCMove move = node.getUntriedMoves();
             if (null != move) {
-                state.doMove(move);
-                node = node.addChild(move, state);
+                stateCpy.doMove(move);
+                node = node.addChild(move, stateCpy);
             }
 
             // random :(
-            while (state.hasMoves()) {
-                state.doRandomMoves(root.getRandom());
+            while (stateCpy.hasMoves()) {
+                stateCpy.doRandomMoves(root.getRandom());
             }
 
             // back-propagate
             while (node != null) {
-                node.updateStats(state.getResult(playerId));
+                node.updateStats(stateCpy.getResult(playerId));
                 node = node.getParent();
             }
         }
@@ -45,7 +46,8 @@ public class MCTree <Rules extends MCState> {
 
     private long harvest(Map<MCMove, Double> wins, Map<MCMove, Double> visits) {
         long nVisits = 0;
-        for (MCNode<Rules> child : root.getChildren()) {
+        List<MCNode<Rules>> children = root.getChildren();
+        for (MCNode<Rules> child : children) {
             MCMove move = child.getMove();
             double visit = child.getVisits();
             nVisits += visit;
@@ -66,8 +68,6 @@ public class MCTree <Rules extends MCState> {
         if (moves.size() == 1) {
             return moves.get(0);
         }
-
-        List<MCNode> nodeFarm = new ArrayList<>();
 
         long totalVisits = 0;
         Map<MCMove, Double> wins = new HashMap<>();
