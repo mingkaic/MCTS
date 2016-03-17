@@ -4,6 +4,7 @@ import MCTS.MCMove;
 import MCTS.MCState;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -12,7 +13,7 @@ import java.util.Random;
  */
 public class C4State implements MCState {
 
-    public static char[] playerMarker = {'.', 'X', 'O'};
+    public static char[] playerMarker = {'*', 'X', 'O'};
     private int playerToMove, nRow, nCol, lastRow, lastCol;
     private char[][] board;
 
@@ -196,21 +197,23 @@ public class C4State implements MCState {
     }
 
     public void printBoard() {
-        System.out.print("\n ");
+        System.out.print("\n  ");
         for (int col = 0; col < nCol; ++col) {
             System.out.print(col+" ");
         }
         System.out.print("\n");
         for (int row = 0; row < nRow; ++row) {
             System.out.print("|");
-            System.out.print(board[row]);
-            System.out.println("|");
+            for (char c : board[row]) {
+                System.out.print(" "+c);
+            }
+            System.out.println(" |");
         }
-        System.out.print("+");
+        System.out.print("+-");
         for (int col = 0; col < nCol - 1; ++col) {
             System.out.print("--");
         }
-        System.out.println("-+");
+        System.out.println("--+");
         System.out.println(playerMarker[playerToMove]+" to move");
     }
 }

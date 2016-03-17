@@ -12,31 +12,31 @@ public class MCTree <Rules extends MCState> {
 
     private MCTree(Rules state, int maxIt) {
         playerId = state.getPlayerId();
-        root = new MCNode(state);
+        root = new MCNode(state.getMoves());
 
-        for (int i = 1; i <= maxIt || maxIt < 0; i++) { // 1 it = 1 game
-            Rules stateCpy = state.copy();
+        for (int i = 0; i < maxIt || maxIt < 0; i++) { // 1 it = 1 game
+            Rules stateCpy = (Rules) state.copy();
             MCNode node = root;
 
-            // select path
+            // selection
             while (null == node.getUntriedMoves() && 0 != node.arity()) {
                 node = node.selectChild();
                 stateCpy.doMove(node.getMove());
             }
 
-            // expand
+            // expansion
             MCMove move = node.getUntriedMoves();
             if (null != move) {
                 stateCpy.doMove(move);
-                node = node.addChild(move, stateCpy);
+                node = node.addChild(move, stateCpy.getMoves());
             }
 
-            // random :(
+            // simulation -- TODO: improve
             while (stateCpy.hasMoves()) {
                 stateCpy.doRandomMoves(root.getRandom());
             }
 
-            // back-propagate
+            // back-propagation
             while (node != null) {
                 node.updateStats(stateCpy.getResult(playerId));
                 node = node.getParent();
@@ -44,22 +44,18 @@ public class MCTree <Rules extends MCState> {
         }
     }
 
-    private long harvest(Map<MCMove, Double> wins, Map<MCMove, Double> visits) {
-        long nVisits = 0;
-        List<MCNode<Rules>> children = root.getChildren();
+    private void harvest(Map<MCMove, Double> winrate) {
+        List<MCNode> children = root.getChildren();
         for (MCNode<Rules> child : children) {
             MCMove move = child.getMove();
+            double win = child.getTots();
             double visit = child.getVisits();
-            nVisits += visit;
-            if (wins.containsKey(move)) {
-                wins.put (move, wins.get(move)+child.getTots());
-                visits.put(move, visits.get(move)+visit);
+            if (winrate.containsKey(move)) {
+                winrate.put(move, winrate.get(move) + win/visit);
             } else {
-                wins.put(move, child.getTots());
-                visits.put(move, visit);
+                winrate.put(move, win/visit);
             }
         }
-        return nVisits;
     }
 
     public static MCMove computeMove(MCState rootState, int maxIt, int nTrees) {
@@ -69,21 +65,19 @@ public class MCTree <Rules extends MCState> {
             return moves.get(0);
         }
 
-        long totalVisits = 0;
-        Map<MCMove, Double> wins = new HashMap<>();
-        Map<MCMove, Double> visits = new HashMap<>();
+        Map<MCMove, Double> winrates = new HashMap<>();
 
         for (int i = 0; i < nTrees; i++) {
             MCTree t = new MCTree(rootState, maxIt);
-            totalVisits += t.harvest(wins, visits);
+            t.harvest(winrates);
         }
 
-        double bestScore = -1;
+        double bestScore = Double.MAX_VALUE;
         MCMove bestMove = MCMove.NO_MOVE;
-        Set<MCMove> visitSet = visits.keySet();
+        Set<MCMove> visitSet = winrates.keySet();
         for (MCMove move : visitSet) {
-            double expectedSuccessRate = (wins.get(move) + 1) / (visits.get(move) + 2);
-            if (expectedSuccessRate > bestScore) {
+            double expectedSuccessRate = winrates.get(move);
+            if (expectedSuccessRate < bestScore) {
                 bestMove = move;
                 bestScore = expectedSuccessRate;
             }

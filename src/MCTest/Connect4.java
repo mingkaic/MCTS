@@ -14,16 +14,16 @@ public class Connect4 {
         boolean human_player = true;
         Scanner reader = new Scanner(System.in);
 
-        int maxIt = 100000;
+        int maxIt = 10000;
         int nTrees = 8;
 
         C4State rules = new C4State();
-        do {
+        while (rules.hasMoves()) {
             System.out.print("State: " );
             rules.printBoard();
 
             MCMove move = MCMove.NO_MOVE;
-            if (rules.getPlayerId() == 1) {
+            if (rules.getPlayerId() == 2) {
                 rules.doMove(MCTree.computeMove(rules, maxIt, nTrees));
             } else {
                 if (human_player) {
@@ -42,7 +42,7 @@ public class Connect4 {
                     rules.doMove(MCTree.computeMove(rules, maxIt, nTrees));
                 }
             }
-        } while (rules.hasMoves());
+        }
 
         System.out.print("\nFinal state: ");
         rules.printBoard();

@@ -23,20 +23,27 @@ public class MCNode <Rules extends MCState> {
 
     public static Random getRandom() {return r;}
 
-    public MCNode(Rules rule) {
-        moves = rule.getMoves();
+    public MCNode(List<MCMove> moves) {
+        this.moves = moves;
         children = new ArrayList<>();
     }
 
-    public MCNode(Rules rule, MCMove move, MCNode<Rules> node) {
-        moves = rule.getMoves();
+    public MCNode(List<MCMove> moves, MCMove move, MCNode<Rules> node) {
+        this.moves = moves;
         children = new ArrayList<>();
         this.move = move;
         parent = node;
     }
 
     public MCMove getUntriedMoves() {
-        return 0 == moves.size() ? null : moves.get(r.nextInt(moves.size()-1));
+        MCMove m;
+        if (0 == moves.size()) {
+            m = null;
+        } else {
+            int uniform = r.nextInt(moves.size());
+            m = moves.get(uniform);
+        }
+        return m;
     }
 
     public MCNode getBestChild() {
@@ -54,6 +61,9 @@ public class MCNode <Rules extends MCState> {
     public MCNode selectChild() {
         MCNode selected = null;
         double bestValue = Double.MIN_VALUE;
+
+        //Collections.shuffle(children, r);
+
         for (MCNode c : children) {
             double uctValue = c.totValue / (c.nVisits + epsilon) +
                     Math.sqrt(Math.log(nVisits+1) / (c.nVisits + epsilon)) +
@@ -67,10 +77,10 @@ public class MCNode <Rules extends MCState> {
         return selected;
     }
 
-    public MCNode addChild(MCMove move, Rules rule) {
-        MCNode node = new MCNode(rule, move, this);
+    public MCNode addChild(MCMove move, List<MCMove> moves) {
+        MCNode node = new MCNode(moves, move, this);
         children.add(node);
-        moves.remove(move);
+        this.moves.remove(move);
         return node;
     }
 
