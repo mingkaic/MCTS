@@ -1,7 +1,7 @@
-package MCTest;
+package Connect4;
 
-import MCTS.MCMove;
-import MCTS.MCTree;
+import Synapse.MonteCarlo.MCMove;
+import Synapse.MonteCarlo.AI;
 
 import java.util.Scanner;
 
@@ -11,24 +11,28 @@ import java.util.Scanner;
 public class Connect4 {
 
     private static void connect() {
-        boolean human_player = true;
+        boolean human_player = false;
         Scanner reader = new Scanner(System.in);
 
-        int maxIt = 10000;
-        int nTrees = 8;
+        int maxIt = 80000;
 
         C4State rules = new C4State();
+        AI bot1 = new AI(rules, maxIt);
+        AI bot2 = null;
+        if (false == human_player) {
+            bot2 = new AI(rules, maxIt);
+        }
+        MCMove move = MCMove.NO_MOVE;
         while (rules.hasMoves()) {
             System.out.print("State: " );
             rules.printBoard();
 
-            MCMove move = MCMove.NO_MOVE;
             if (rules.getPlayerId() == 2) {
-                rules.doMove(MCTree.computeMove(rules, maxIt, nTrees));
+                move = bot1.computeMove(move, rules);
+                rules.doMove(move);
             } else {
                 if (human_player) {
                     while (true) {
-                        move = MCMove.NO_MOVE;
                         System.out.print("Input your move: ");
                         move = new MCMove(reader.nextInt());
                         try {
@@ -39,7 +43,8 @@ public class Connect4 {
                         }
                     }
                 } else {
-                    rules.doMove(MCTree.computeMove(rules, maxIt, nTrees));
+                    move = bot2.computeMove(move, rules);
+                    rules.doMove(move);
                 }
             }
         }

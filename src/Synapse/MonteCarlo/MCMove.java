@@ -1,4 +1,4 @@
-package MCTS;
+package Synapse.MonteCarlo;
 
 import java.util.Comparator;
 

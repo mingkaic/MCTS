@@ -1,7 +1,7 @@
-package MCTest;
+package Connect4;
 
-import MCTS.MCMove;
-import MCTS.MCState;
+import Synapse.MonteCarlo.MCMove;
+import Synapse.MonteCarlo.MCState;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,7 +17,11 @@ public class C4State implements MCState {
     private int playerToMove, nRow, nCol, lastRow, lastCol;
     private char[][] board;
 
-    private void setUp(int nRow, int nCol) {
+    public C4State() {
+        this(6, 7);
+    }
+
+    public C4State(int nRow, int nCol) {
         playerToMove = 1;
         this.nRow = nRow;
         this.nCol = nCol;
@@ -27,14 +31,6 @@ public class C4State implements MCState {
         for (int i = 0; i < nRow; i++) {
             Arrays.fill(board[i], playerMarker[0]); // init
         }
-    }
-
-    public C4State() {
-        setUp(6, 7);
-    }
-
-    public C4State(int nRow, int nCol) {
-        setUp(nRow, nCol);
     }
     
     private C4State(C4State source) {
@@ -53,13 +49,12 @@ public class C4State implements MCState {
     @Override
     public void doMove(MCMove move) {
         int row = nRow - 1;
-        while (board[row][move.getValue()] != playerMarker[0]) {
+        while (row > 0 && board[row][move.getValue()] != playerMarker[0]) {
             row--;
         }
         board[row][move.getValue()] = playerMarker[playerToMove];
         lastCol = move.getValue();
         lastRow = row;
-
         playerToMove = 3 - playerToMove;
     }
 
