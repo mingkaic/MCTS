@@ -2,7 +2,10 @@ package Synapse.MonteCarlo;
 
 import Synapse.Synapse;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created by cmk on 2016-03-19.
@@ -10,106 +13,99 @@ import java.util.*;
 public class MCSynapse <Policy extends MCState> implements Synapse<Policy, MCMove> {
 
     private MCNode<Policy> root;
-    private Map<MCMove, Double> wins = new HashMap<>();
-    private Map<MCMove, Double> visits = new HashMap<>();
     public int simLimit = 1000; // pretty damn big
+
+    public static class MCCollection {
+        public Map<MCMove, MCNode> collection = new HashMap<>();
+
+        public void collect(MCSynapse syn) {
+            ((HashMap) collection).putAll(syn.root.children);
+        }
+    }
 
     public MCSynapse(Policy rule) {
         root = new MCNode(rule);
-        for (MCMove move : rule.getMoves()) {
-            wins.put(move, 0.0);
-            visits.put(move, 0.0);
+    }
+
+    // evaluate the effectiveness of training regiments
+    public double convergence() {
+        if (root.hasUntriedMoves()) {
+            return 0;
         }
+        double averageWR = 0;
+        List<Double> WRSet = new ArrayList<>();
+        for (MCNode n : root.children.values()) {
+            double winrate = n.totValue / n.nVisits;
+            averageWR += winrate;
+            WRSet.add(winrate);
+        }
+        int N = root.arity();
+        averageWR /= N;
+        if (N == 0) {
+            return Double.MAX_VALUE;
+        }
+        final double finalAverageWR = averageWR;
+        double variance = WRSet.stream().mapToDouble(d-> {
+            double i = d-finalAverageWR;
+            return i*i;
+        }).sum()/N;
+        double stdev = Math.sqrt(variance);
+        return stdev;
+    }
+
+    public double rootVisits() {
+        return root.nVisits;
     }
 
     @Override
     public void train(Policy currentState, MCMove o) {
-        Policy stateCpy = (Policy) currentState.copy();
+        Policy stateCpy = null;
+        synchronized (currentState) {
+            stateCpy = (Policy) currentState.copy();
+        }
+        if (null == stateCpy) return;
         MCNode node = root;
         MCMove move = node.getUntriedMoves();
 
         // selection
         while (null == move && 0 != node.arity()) {
-            node = node.selectChild();
-            stateCpy.doMove(node.getMove());
+            move = node.selectMove();
+            stateCpy.doMove(move);
+            node = node.getChild(move);
+
             move = node.getUntriedMoves();
         }
+
         // expansion
         if (null != move) {
             stateCpy.doMove(move);
             node = node.addChild(move, stateCpy);
         }
-
         // simulation -- TODO: improve
         for (int i = 0; i < simLimit && stateCpy.hasMoves(); i++) {
             stateCpy.doRandomMoves(root.getRandom());
         }
-
-        double latestResult = 0;
-        MCMove latestMove = null;
         // back-propagation
         while (node != root) {
-            latestResult = stateCpy.getResult(node.playerId);
-            latestMove = node.getMove();
-            node.updateStats(latestResult);
+            node.updateStats(stateCpy.getResult(node.playerId));
             node = node.parent;
-        }
-        if (null != latestMove) {
-            wins.put(latestMove, wins.get(latestMove) + latestResult);
-            visits.put(latestMove, visits.get(latestMove) + 1);
         }
     }
 
     @Override
     public MCMove output(Policy currentState) {
-        double bestScore = Double.MIN_VALUE;
-        MCMove bestMove = MCMove.NO_MOVE;
-        Set<MCMove> moveSets = wins.keySet();
-        for (MCMove move : moveSets) {
-            double expectedSuccessRate = wins.get(move)/visits.get(move);
-            if (expectedSuccessRate > bestScore) {
-                bestMove = move;
-                bestScore = expectedSuccessRate;
-            }
-        }
-        return bestMove;
+        return root.bestMove();
     }
 
-    public void joinWeight(MCSynapse s) {
-        wins.putAll(s.wins);
-        visits.putAll(s.visits);
-    }
+    public void moveDown(final MCMove moveTaken, Policy rule) {
+        MCNode foundRoot = root.getChild(moveTaken);
 
-    public void moveDown(MCMove moveTaken, Policy rule) {
-        MCNode foundRoot = null;
-        // TODO 2: optimize MCNode by mapping move to children nodes
-        for (MCNode child : root.getChildren()) {
-            if (moveTaken.equals(child.getMove())) {
-                foundRoot = child;
-            }
-        }
-
-        root = foundRoot; // TODO: sometimes size of root.children and root.move are both 0 RESOLVE (solution 1: take policy moveset)
-        root.parent = null; // garabage collect parent and sibling branches?
-
-        // refresh wins and visits
-        wins.clear();
-        visits.clear();
-        for (MCMove move : rule.getMoves()) {
-            wins.put(move, 0.0);
-            visits.put(move, 0.0);
-        }
-        for (MCNode child : root.getChildren()) {
-            MCMove move = child.getMove();
-            double win = child.getTots();
-            double visit = child.getVisits();
-            if (wins.containsKey(move)) {
-                wins.put(move, wins.get(move) + win);
-                visits.put(move, visits.get(move) + visit);
-            } else {
-                wins.put(move, win);
-                visits.put(move, visit);
-            }
+        if (null == foundRoot) {
+            // unable to recycle
+            root = new MCNode<>(rule);
+        } else {
+            root = foundRoot; // TODO: sometimes size of root.children and root.move are both 0 RESOLVE (solution 1: take policy moveset)
+            root.parent = null; // garabage collect parent and sibling branches?
         }
     }
 }

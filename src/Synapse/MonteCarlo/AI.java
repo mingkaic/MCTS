@@ -3,44 +3,87 @@ package Synapse.MonteCarlo;
 /**
  * Created by cmk on 2016-03-14.
  */
-public class AI <Rules extends MCState> {
+public class AI <Policy extends MCState> {
+    private static final int DEFAULT_NSYN = 8;
+    private MCSynapse syns[];
+    private int nTraining;
+    private int sampleRate = 100;
+    private Policy policy;
 
-    private MCSynapse syn; // single synapse TODO 3: spread out synapse, and make it thread-safe
-    private int prevTraining;
+    private class TrainingSession implements Runnable {
+        MCSynapse syn;
+        int nTraining;
+        TrainingSession(MCSynapse syn, int nTraining) { this.syn = syn; this.nTraining = nTraining; }
 
-    public AI(Rules policy, int nTraining) {
-        prevTraining = nTraining;
-        syn = new MCSynapse(policy);
-
-        for (int i = 0; i < nTraining; i++) {
-            syn.train(policy, null);
-        }
-    }
-
-    public AI(Rules policy, int nTraining, int limitSim) {
-        prevTraining = nTraining;
-        syn = new MCSynapse(policy);
-
-        syn.simLimit = limitSim; // prevents the simulation from looking too far/speeds up simulation
-
-        for (int i = 0; i < nTraining; i++) {
-            syn.train(policy, null);
-        }
-    }
-
-    public void updateSynapse(MCMove lastMove, Rules policy) {
-        syn.moveDown(lastMove, policy);
-        for (int i = 0; i < prevTraining/2; i++) {
-            syn.train(policy, null);
-        }
-    }
-
-    public MCMove computeMove(MCMove lastMove, Rules policy) {
-            if (false == lastMove.equals(MCMove.NO_MOVE)) {
-                updateSynapse(lastMove, policy);
+        @Override
+        public void run() {
+            double stdev = 1;
+            for (int i = 0; i < nTraining && stdev > 0.1; i++) {
+                if (i % sampleRate == sampleRate - 1) {
+                    stdev = syn.convergence();
+                }
+                syn.train(policy, null);
             }
-            MCMove bestMove = syn.output(policy);
-            updateSynapse(bestMove, policy);
-            return bestMove;
+        }
+    };
+
+    public AI(Policy policy, int nTraining) {
+        this(policy, nTraining, DEFAULT_NSYN);
+    }
+
+    public AI(Policy policy, int nTraining, int nSyns) {
+        this.policy = policy;
+        this.nTraining = nTraining;
+        this.syns = new MCSynapse[nSyns];
+        for (int i = 0; i < syns.length; i++) {
+            syns[i] = new MCSynapse(policy);
+        }
+    }
+
+    public AI(Policy policy, int nTraining, int nSyns, int simLimit) {
+        this(policy, nTraining, nSyns);
+        for (MCSynapse s : syns) {
+            s.simLimit = simLimit; // sets a limit to the depth of the tree
+        }
+    }
+
+    private void training(Policy state) {
+        Thread sess[] = new Thread[syns.length];
+        for (int i = 0; i < syns.length; i++) {
+            MCSynapse syn = syns[i];
+            sess[i] = new Thread(new TrainingSession(syn, (int) (nTraining-syn.rootVisits())));
+            sess[i].start();
+        }
+
+        for (Thread t : sess) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void updateSynapse(MCMove lastMove, Policy policy) {
+        for (MCSynapse syn : syns) {
+            syn.moveDown(lastMove, policy);
+        }
+        training(policy);
+    }
+
+    public MCMove doMove(MCMove lastMove) {
+        if (null != lastMove && false == lastMove.equals(MCMoveImpl.NO_MOVE)) {
+            updateSynapse(lastMove, policy);
+        } else {
+            training(policy);
+        }
+        MCSynapse.MCCollection col = new MCSynapse.MCCollection();
+        for (MCSynapse syn : syns) {
+            col.collect(syn);
+        }
+        MCMove bestmove = MCNode.bestMove(col.collection);
+        policy.doMove(bestmove);
+        updateSynapse(bestmove, policy);
+        return bestmove;
     }
 }

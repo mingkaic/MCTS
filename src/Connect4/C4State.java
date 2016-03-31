@@ -1,11 +1,11 @@
 package Connect4;
 
 import Synapse.MonteCarlo.MCMove;
+import Synapse.MonteCarlo.MCMoveImpl;
 import Synapse.MonteCarlo.MCState;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -47,13 +47,17 @@ public class C4State implements MCState {
     }
 
     @Override
-    public void doMove(MCMove move) {
+    public void doMove(MCMove m) {
+        if (null == m) {
+            System.out.println("uh no");
+        }
+        MCMoveImpl move = (MCMoveImpl) m;
         int row = nRow - 1;
-        while (row > 0 && board[row][move.getValue()] != playerMarker[0]) {
+        while (row > 0 && board[row][move.value] != playerMarker[0]) {
             row--;
         }
-        board[row][move.getValue()] = playerMarker[playerToMove];
-        lastCol = move.getValue();
+        board[row][move.value] = playerMarker[playerToMove];
+        lastCol = move.value;
         lastRow = row;
         playerToMove = 3 - playerToMove;
     }
@@ -64,7 +68,7 @@ public class C4State implements MCState {
         do {
             rVal = r.nextInt(nCol);
         } while (board[0][rVal] != playerMarker[0]);
-        doMove(new MCMove(rVal));
+        doMove(new MCMoveImpl(rVal));
     }
 
     @Override
@@ -84,15 +88,15 @@ public class C4State implements MCState {
     }
 
     @Override
-    public List<MCMove> getMoves() {
-        List<MCMove> moves = new ArrayList<>();
+    public ArrayList<MCMove> getMoves() {
+        ArrayList<MCMove> moves = new ArrayList<>();
         if (getWinner() != playerMarker[0]) {
             return moves;
         }
 
         for (int col = 0; col < nCol; ++col) {
             if (board[0][col] == playerMarker[0]) {
-                moves.add(new MCMove(col));
+                moves.add(new MCMoveImpl(col));
             }
         }
         return moves;

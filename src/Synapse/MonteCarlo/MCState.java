@@ -1,6 +1,6 @@
 package Synapse.MonteCarlo;
 
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Random;
 
 /**
@@ -14,12 +14,12 @@ public interface MCState {
 
     public boolean hasMoves();
 
-    public List<MCMove> getMoves();
+    public ArrayList<MCMove> getMoves();
 
     public double getResult(int playerId);
     
     public MCState copy();
 
-    int getPlayerId();
+    public int getPlayerId();
 
 }
