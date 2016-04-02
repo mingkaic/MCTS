@@ -1,8 +1,5 @@
 package Synapse.MonteCarlo;
 
-/**
- * Created by cmk on 2016-03-14.
- */
 public class AI <Policy extends MCState> {
     private static final int DEFAULT_NSYN = 8;
     private MCSynapse syns[];
@@ -18,14 +15,20 @@ public class AI <Policy extends MCState> {
         @Override
         public void run() {
             double stdev = 1;
-            for (int i = 0; i < nTraining && stdev > 0.1; i++) {
-                if (i % sampleRate == sampleRate - 1) {
-                    stdev = syn.convergence();
+            Policy snapshot = null;
+            synchronized (policy) {
+                snapshot = (Policy) policy.copy();
+            }
+            if (snapshot != null) {
+                for (int i = 0; i < nTraining && stdev > 0.1; i++) {
+                    if (i % sampleRate == sampleRate - 1) {
+                        stdev = syn.convergence();
+                    }
+                    syn.train(snapshot, null);
                 }
-                syn.train(policy, null);
             }
         }
-    };
+    }
 
     public AI(Policy policy, int nTraining) {
         this(policy, nTraining, DEFAULT_NSYN);
@@ -48,18 +51,22 @@ public class AI <Policy extends MCState> {
     }
 
     private void training(Policy state) {
-        Thread sess[] = new Thread[syns.length];
-        for (int i = 0; i < syns.length; i++) {
-            MCSynapse syn = syns[i];
-            sess[i] = new Thread(new TrainingSession(syn, (int) (nTraining-syn.rootVisits())));
-            sess[i].start();
-        }
+        if (syns.length == 1) {
+            new TrainingSession(syns[0], (int) (nTraining - syns[0].rootVisits())).run();
+        } else {
+            Thread sess[] = new Thread[syns.length];
+            for (int i = 0; i < syns.length; i++) {
+                MCSynapse syn = syns[i];
+                sess[i] = new Thread(new TrainingSession(syn, (int) (nTraining - syn.rootVisits())));
+                sess[i].start();
+            }
 
-        for (Thread t : sess) {
-            try {
-                t.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            for (Thread t : sess) {
+                try {
+                    t.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }

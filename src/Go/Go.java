@@ -5,87 +5,60 @@
  */
 package Go;
 
-import Synapse.MonteCarlo.MCMove;
 import Synapse.MonteCarlo.AI;
+import Synapse.MonteCarlo.MCMove;
+
+import java.util.List;
 import java.util.Scanner;
 
-/**
- *
- * @author mchen
- */
 public class Go {
-    private static void SeeUsGO() {
-        boolean player1Human = true;
-        boolean player2Human = true;
-        Scanner reader = new Scanner(System.in);
+    Go() {
+        GoState rule = new GoState();
+        Scanner in = new Scanner(System.in);
 
-        // AI settings
-        int maxIt = 10000;
-        int nTrees = 10;
+        boolean human1 = false;
+        boolean human2 = false;
 
-        int turn, i, j;
+        int nTraining = 10000;
+        int nTree = 1;
+        int depth = 100;
 
-	    GoState rules = new GoState();
-        AI bot1 = null;
-        AI bot2 = null;
-        if (false == player1Human) {
-            bot1 = new AI(rules, maxIt);
-        }
-        if (false == player2Human) {
-            bot2 = new AI(rules, maxIt);
-        }
-        MCMove move = MCMove.NO_MOVE;
-        while (rules.hasMoves()) {
-            System.out.println("State: " );
-            System.out.println(rules.printBoard());
-
-            turn = rules.getPlayerId();
-
-            if (turn == 1 && false == player1Human) {
-                move = bot1.computeMove(move, rules);
-            } else if (turn == 2 && false == player2Human) {
-                move = bot2.computeMove(move, rules);
+        AI bot1 = new AI(rule, nTraining, nTree, depth);
+        AI bot2 = new AI(rule, nTraining, nTree, depth);
+            
+        List<MCMove> moves = rule.getMoves();
+        MCMove validM = null;
+        while (moves.size() > 0) {
+            rule.printBoard();
+            if (false == human1 && rule.getPlayerId() == 1) {
+                validM = bot1.doMove(validM);
+            } else if (false == human2 && rule.getPlayerId() == 2) {
+                validM = bot2.doMove(validM);
             } else {
-                boolean stalling = true;
-                while (stalling) {
-                    move = MCMove.NO_MOVE;
-                    System.out.print("Input Row: ");
-                    i = reader.nextInt();
-                    System.out.print("Input Col: ");
-                    j = reader.nextInt();
-                    move = new MCMove(rules.getIndex(i, j));
-
-                    if (rules.isPossible(i, j)) {
-                        stalling = false;
-                    } else {
-                        System.out.println("invalid move");
+                validM = null;
+                while (validM == null) {
+                    String lstr = in.next().toLowerCase();
+                    int x = lstr.charAt(0) - 'a';
+                    int y = lstr.charAt(1) - 'a';
+                    Location l = new Location(x, y);
+                    for (MCMove m : moves) {
+                        if (((Movement) m).placement.equals(l)) {
+                            validM = m;
+                        }
                     }
                 }
+                rule.doMove(validM);
             }
-            rules.doMove(move);
+            moves = rule.getMoves();
         }
-
-        System.out.println("\nFinal state: ");
-        System.out.println(rules.printBoard());
-
-        String winning;
-        if (rules.getResult(2) == 1.0) {
-            winning = "Player 1 wins!";
-        }
-        else if (rules.getResult(1) == 1.0) {
-            winning = "Player 2 wins!";
-        }
-        else {
-            winning = "Both of you sucks!";
-        }
-        System.out.println(winning);
+        System.out.println("game over! Blacks result: "+rule.getResult(2) + ", White result: "+rule.getResult(1));
     }
-
+    
     public static void main(String[] args) {
         try {
-            SeeUsGO();
+            new Go();
         } catch (Exception e) {
-            System.out.println(e.getCause());
+            System.out.println(e.getStackTrace());
         }
     }
 }
